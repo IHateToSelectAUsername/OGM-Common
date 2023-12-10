@@ -153,7 +153,7 @@ def show_flash_partitioning(source, target, env):
         eeprom_start = env["PICO_EEPROM_START"] - 268435456
         flash_end = eeprom_start + 4096
 
-        if env["FS_START"] > 0 and not env["FS_START"] == env["FS_END"]:
+        if env["FS_START"] > 0 and env["FS_START"] != env["FS_END"]:
             filesystem_start = env["FS_START"] - 268435456
             filesystem_end = env["FS_END"] - 268435456
             flash_elements.append({ 'name': 'FILESYSTEM', 'start': filesystem_start, 'end': filesystem_end, 'container': False })
@@ -175,7 +175,7 @@ def show_flash_partitioning(source, target, env):
             if (x[0].endswith("FLASH_OFFSET") or x[0].endswith("FLASH_SIZE")):
                 name = name.replace("_FLASH_OFFSET", "")
                 name = name.replace("_FLASH_SIZE", "")
-                if(not name in defined_sizes):
+                if(name not in defined_sizes):
                     defined_sizes[name] = { 'offset': 0, 'size': 0 }
                 
                 if(x[0].endswith("FLASH_OFFSET")):
@@ -184,7 +184,7 @@ def show_flash_partitioning(source, target, env):
                 if(x[0].endswith("_FLASH_SIZE")):
                     defined_sizes[name]['size'] = int(x[1], 16)
 
-    if projenv['PIOPLATFORM'] == 'atmelsam' and not defined_sizes['KNX']['offset'] > 0:
+    if projenv['PIOPLATFORM'] == 'atmelsam' and defined_sizes['KNX']['offset'] <= 0:
         defined_sizes['KNX']['offset'] = system_end - defined_sizes['KNX']['size']
 
     # Schätzung der nutzung des knx speichers
