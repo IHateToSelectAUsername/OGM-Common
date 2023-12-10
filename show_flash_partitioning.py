@@ -12,36 +12,48 @@ class console_color:
     RED = '\033[91m'
     END = '\033[0m'
 
-def show_flash_partitioning(source, target, env):
+class FlashRegion:
+    def __init__(self, name, start, end, container=False):
+        self.name = name
+        self.start = start
+        self.end = end
+        self.container = container
+    def __str__(self):
+        return f"FlashRegion(Name: {self.name}, Start: {self.start}, End: {self.end}, Container: {self.container})"
 
-    # start of flash address pointer
-    flash_addr_pointer = 268435456
+    def size(self):
+        return self.end - self.start
 
-    def oversized(ref_element, flash):
+    def oversized(self, flash):
         # Bin ich ein Container
-        if (ref_element['container']):
+        if (self.container):
             return False
 
         for element in flash:
             # Darf es nicht selber sein
-            if (ref_element == element):
+            if (self == element):
                 continue
 
             # Liegt das Element vor mir
-            if(element['end'] <= ref_element['start']):
+            if(element.end <= self.start):
                 continue
 
             # Liegt das Element hinter mir
-            if(element['start'] >= ref_element['end']):
+            if(element.start >= self.end):
                 continue
 
             # Passe ich in das Element rein
-            if(element['container'] and element['start'] <= ref_element['start'] and element['end'] >= ref_element['end']):
+            if(element.container and element.start <= self.start and element.end >= self.end):
                 continue
 
             return True
 
         return False
+
+def show_flash_partitioning(source, target, env):
+
+    # start of flash address pointer
+    flash_addr_pointer = 268435456
 
     def build_tree(start, end, flash, indent = 0, stack = []):
         prev = start
@@ -51,38 +63,38 @@ def show_flash_partitioning(source, target, env):
             if (element in stack):
                 continue
 
-            if (element['start'] >= start and element['start'] < end):
-                if (prev != element['start'] and element['start'] > prev):
-                    print_entry(console_color.GREEN, { 'name': 'FREE', 'start': prev, 'end': element['start']}, indent)
+            if (element.start >= start and element.start < end):
+                if (prev != element.start and element.start > prev):
+                    print_entry(console_color.GREEN, FlashRegion('FREE', prev, element.start), indent)
 
                 stack.append(element)
-                prev = element['end']
+                prev = element.end
                 empty = False
 
                 color = console_color.CYAN
-                if (element['container']):
+                if (element.container):
                     color = console_color.BLUE
 
                 # Oversize
-                if (oversized(element, flash)):
+                if (element.oversized(flash)):
                     color = console_color.RED
 
                 print_entry(color, element, indent)
 
-                if (element['container']):
-                    build_tree(element['start'], element['end'], flash, indent+1, stack)
+                if (element.container):
+                    build_tree(element.start, element.end, flash, indent+1, stack)
 
         if (not empty and prev < end):
-            print_entry(console_color.GREEN, { 'name': 'FREE', 'start': prev, 'end': end}, indent)
+            print_entry(console_color.GREEN, FlashRegion('FREE', prev, end), indent)
 
     def build_entry(element, indent = 0):
         return (
             "{}{}{} - {} ({} Bytes)".format(
                 "".rjust(indent*2, " "),
-                (element['name'] + ":").ljust(30-indent*2, ' '),
-                format(element['start'], "#010x"),
-                format(element['end'], "#010x"),
-                format(element['end']-element['start'], "#10")
+                (element.name + ":").ljust(30-indent*2, ' '),
+                format(element.start, "#010x"),
+                format(element.end, "#010x"),
+                format(element.end-element.start, "#10")
             )
         )
 
@@ -160,17 +172,17 @@ def show_flash_partitioning(source, target, env):
         if env["FS_START"] > 0 and env["FS_START"] != env["FS_END"]:
             filesystem_start = env["FS_START"] - flash_addr_pointer
             filesystem_end = env["FS_END"] - flash_addr_pointer
-            flash_elements.append({ 'name': 'FILESYSTEM', 'start': filesystem_start, 'end': filesystem_end, 'container': False })
+            flash_elements.append(FlashRegion('FILESYSTEM', filesystem_start, filesystem_end, ))
         
     if projenv['PIOPLATFORM'] == 'atmelsam':
         flash_end = 0x40000
 
     eeprom_end = flash_end
 
-    flash_elements.append({ 'name': 'FLASH',      'start': flash_start, 'end': flash_end, 'container': True })
-    flash_elements.append({ 'name': 'FIRMWARE',   'start': firmware_start, 'end': firmware_end, 'container': False })
+    flash_elements.append(FlashRegion('FLASH', flash_start, flash_end, True))
+    flash_elements.append(FlashRegion('FIRMWARE', firmware_start, firmware_end))
     if projenv['PIOPLATFORM'] != 'atmelsam':
-        flash_elements.append({ 'name': 'EEPROM',     'start': eeprom_start, 'end': eeprom_end, 'container': False })
+        flash_elements.append(FlashRegion('EEPROM', eeprom_start, eeprom_end))
 
     defined_sizes = {}
     for x in projenv["CPPDEFINES"]:
@@ -209,11 +221,11 @@ def show_flash_partitioning(source, target, env):
             container = False
             if name == "KNX" and knx_used > 0:
                 container = True
-                flash_elements.append({ 'name': "DATA*", 'start': data['offset'], 'end': data['offset'] + knx_used, 'container': False })
-            flash_elements.append({ 'name': name, 'start': data['offset'], 'end': data['offset'] + data['size'], 'container': container })
+                flash_elements.append(FlashRegion("DATA*", data['offset'], data['offset'] + knx_used))
+            flash_elements.append(FlashRegion(name, data['offset'], data['offset'] + data['size'], container))
 
 
-    sorted_flash_elements = sorted(flash_elements, key=lambda element: (element['start'], -element['end']-element['start']))
+    sorted_flash_elements = sorted(flash_elements, key=lambda element: (element.start, -element.size()))
     print("")
     stack = []
     print("{}Show flash partitioning:{}".format(console_color.YELLOW, console_color.END))
