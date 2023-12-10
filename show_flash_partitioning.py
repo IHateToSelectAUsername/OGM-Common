@@ -13,6 +13,10 @@ class console_color:
     END = '\033[0m'
 
 def show_flash_partitioning(source, target, env):
+
+    # start of flash address pointer
+    flash_addr_pointer = 268435456
+
     def oversized(ref_element, flash):
         # Bin ich ein Container
         if (ref_element['container']):
@@ -118,7 +122,7 @@ def show_flash_partitioning(source, target, env):
             size += int(m.group(1))
         
         if projenv['PIOPLATFORM'] == 'raspberrypi':
-            size -= 268435456 # subtract start of flash address pointer
+            size -= flash_addr_pointer
 
         return size
     
@@ -150,12 +154,12 @@ def show_flash_partitioning(source, target, env):
 
     firmware_end = firmware_size(env)
     if projenv['PIOPLATFORM'] == 'raspberrypi':
-        eeprom_start = env["PICO_EEPROM_START"] - 268435456
+        eeprom_start = env["PICO_EEPROM_START"] - flash_addr_pointer
         flash_end = eeprom_start + 4096
 
         if env["FS_START"] > 0 and env["FS_START"] != env["FS_END"]:
-            filesystem_start = env["FS_START"] - 268435456
-            filesystem_end = env["FS_END"] - 268435456
+            filesystem_start = env["FS_START"] - flash_addr_pointer
+            filesystem_end = env["FS_END"] - flash_addr_pointer
             flash_elements.append({ 'name': 'FILESYSTEM', 'start': filesystem_start, 'end': filesystem_end, 'container': False })
         
     if projenv['PIOPLATFORM'] == 'atmelsam':
