@@ -12,6 +12,9 @@ class console_color:
     RED = '\033[91m'
     END = '\033[0m'
 
+class OversizedError(Exception):
+    pass
+
 class FlashRegion:
     def __init__(self, name, start, end, container=False):
         self.name = name
@@ -58,6 +61,7 @@ def show_flash_partitioning(source, target, env):
     def build_tree(start, end, flash, indent = 0, stack = []):
         prev = start
         empty = True
+        found_oversized = False
 
         for i, element in enumerate(flash):
             if (element in stack):
@@ -78,14 +82,18 @@ def show_flash_partitioning(source, target, env):
                 # Oversize
                 if (element.oversized(flash)):
                     color = console_color.RED
+                    found_oversized = True
 
                 print_entry(color, element, indent)
 
                 if (element.container):
-                    build_tree(element.start, element.end, flash, indent+1, stack)
+                    if build_tree(element.start, element.end, flash, indent+1, stack):
+                        found_oversized = True
 
         if (not empty and prev < end):
             print_entry(console_color.GREEN, FlashRegion('FREE', prev, end), indent)
+
+        return found_oversized
 
     def build_entry(element, indent = 0):
         return (
@@ -220,10 +228,14 @@ def show_flash_partitioning(source, target, env):
     print("")
     stack = []
     print("{}Show flash partitioning:{}".format(console_color.YELLOW, console_color.END))
-    build_tree(flash_start, flash_end, sorted_flash_elements, 1, stack)
+    found_oversized = build_tree(flash_start, flash_end, sorted_flash_elements, 1, stack)
     if (knx_used > 0):
         print("")
         print("* This value is an estimate")
+    if found_oversized:
+        print("")
+        print("{} ERROR OVERSIZED {}".format(console_color.RED, console_color.END))
+        raise OversizedError()
     print("")
 
 
