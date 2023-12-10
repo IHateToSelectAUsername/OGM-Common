@@ -137,23 +137,14 @@ def show_flash_partitioning(source, target, env):
             size -= flash_addr_pointer
 
         return size
-    
-    def get_knx_parameter_size():
+
+    def get_knxprod_define_value(name):
         content = open(find_header_file("knxprod.h"), 'r').read()
-        m = re.search("#define MAIN_ParameterSize ([0-9]+)", content)
+        m = re.search("#define " + name + " ([0-9]+)", content)
         if m is None:
             return 0
-        
         return int(m.group(1))
 
-    def get_knx_max_ko_number():
-        content = open(find_header_file("knxprod.h"), 'r').read()
-        m = re.search("#define MAIN_MaxKoNumber ([0-9]+)", content)
-        if m is None:
-            return 0
-        
-        return int(m.group(1))
-    
     # print(str(source[0]))
     # print(env.Dictionary())
     # print(projenv.Dictionary())
@@ -193,7 +184,7 @@ def show_flash_partitioning(source, target, env):
                 name = name.replace("_FLASH_SIZE", "")
                 if(name not in defined_sizes):
                     defined_sizes[name] = { 'offset': 0, 'size': 0 }
-                
+
                 if(x[0].endswith("FLASH_OFFSET")):
                     defined_sizes[name]['offset'] = int(x[1], 16)
 
@@ -205,9 +196,9 @@ def show_flash_partitioning(source, target, env):
 
     # Schätzung der nutzung des knx speichers
     # Größe der Parameter
-    knx_parameter_size = get_knx_parameter_size()
+    knx_parameter_size = get_knxprod_define_value("MAIN_ParameterSize")
     # Größe der KO Tabelle
-    knx_ko_table_size = get_knx_max_ko_number() * 2
+    knx_ko_table_size = get_knxprod_define_value("MAIN_MaxKoNumber") * 2
     # Größe der GA Tabelle geschätzt
     # Annahme, dass im Schnitt 2 GA mit einem KO verknüpft wird = get_knx_max_ko_number * 4 (Eintrag) * 2 (GAs)
     knx_ga_table_size = knx_ko_table_size * 4
