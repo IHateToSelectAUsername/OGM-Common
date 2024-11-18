@@ -48,7 +48,7 @@ namespace OpenKNX
         Watchdog watchdog;
         Time::TimeManager time;
         Sun::SunCalculation sun;
-        Time::Calendar calender;
+        Time::Calendar calendar;
 
         Button progButton = Button("Prog");
 #ifdef FUNC1_BUTTON_PIN
