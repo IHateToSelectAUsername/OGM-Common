@@ -3,7 +3,9 @@
 #include "DPT19Flags.h"
 #include "TimeProvider.h"
 #include "TimeProviderKnx.h"
-
+#ifndef ParamBASE_InternalTime 
+    #define ParamBASE_InternalTime 0
+#endif
 namespace OpenKNX
 {
     namespace Time
@@ -552,7 +554,7 @@ namespace OpenKNX
                     knxDate.tm_hour = localTime.hour;
                     knxDate.tm_min = localTime.minute;
                     knxDate.tm_sec = localTime.second;
-
+#ifdef KoBASE_DateTime
                     KoBASE_DateTime.valueNoSend(knxDate, DPT_DateTime);
 
                     uint8_t* raw = KoBASE_DateTime.valueRef();
@@ -569,12 +571,14 @@ namespace OpenKNX
                     raw[6] &= ~DPT19_NO_DATE;
                     raw[6] &= ~DPT19_NO_DAY_OF_WEEK;
                     raw[6] &= ~DPT19_NO_TIME;
-
+#endif
                     KoBASE_IsSummertime.valueNoSend(localTime.isDst != 0, DPT_Switch);
 
                     if ((_lastSendMinute % 10 == 0 && _lastSendSecond == 0) || forceSend)
                     {
+#ifdef KoBASE_DateTime
                         KoBASE_DateTime.objectWritten();
+#endif
                         KoBASE_Time.objectWritten();
                         KoBASE_Date.objectWritten();
                         KoBASE_IsSummertime.objectWritten();
