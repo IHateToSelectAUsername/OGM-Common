@@ -1,8 +1,10 @@
 # Changes
 
-## 1.3.x:
-
+## 1.3.0:
+* Feature #34: Time Implementation and Sun Calculation 
 * Update: RP2040 Platform to Core 4.2.1
+* Change: Stop build process on overlapping flash memory regions
+  * Refactor: Memory Layout-Check/Info in Build-Process
 
 ## 1.2.1: 2024-11-18
 * Update: RP2040 Platform to Core 4.1.1 + Rpi Base Platform
