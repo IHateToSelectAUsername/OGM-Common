@@ -25,7 +25,7 @@ namespace OpenKNX
             }
         }
 
-        void SunCalculation::recalculateSunCalculation(DateTime& utc)
+        void SunCalculation::recalculateSunCalculation(DateTime &utc)
         {
             double latitude = ParamBASE_Latitude;
             double longitude = ParamBASE_Longitude;
@@ -54,13 +54,12 @@ namespace OpenKNX
             _sunRiseUtc.hour = (int)floor(rise);
             _sunRiseUtc.minute = (int)(60 * (rise - floor(rise)));
             _sunRiseUtc.second = 0;
-            _sunRiseLocalTime = DateTime(utc.year, utc.month, utc.day,  _sunRiseUtc.hour ,  _sunRiseUtc.minute, _sunRiseUtc.second, DateTimeTypeUTC).toLocalTime();
+            _sunRiseLocalTime = DateTime(utc.year, utc.month, utc.day, _sunRiseUtc.hour, _sunRiseUtc.minute, _sunRiseUtc.second, DateTimeTypeUTC).toLocalTime();
 
-        
             _sunSetUtc.hour = (int)floor(set);
             _sunSetUtc.minute = (int)(60 * (set - floor(set)));
             _sunSetUtc.second = 0;
-            _sunSetLocalTime = DateTime(utc.year, utc.month, utc.day,  _sunSetUtc.hour ,  _sunSetUtc.minute, _sunSetUtc.second, DateTimeTypeUTC).toLocalTime();
+            _sunSetLocalTime = DateTime(utc.year, utc.month, utc.day, _sunSetUtc.hour, _sunSetUtc.minute, _sunSetUtc.second, DateTimeTypeUTC).toLocalTime();
 
             _sunCalculationValid = true;
         }

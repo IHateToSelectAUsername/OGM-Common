@@ -3,7 +3,7 @@
 #include "DPT19Flags.h"
 #include "TimeProvider.h"
 #include "TimeProviderKnx.h"
-#ifndef ParamBASE_InternalTime 
+#ifndef ParamBASE_InternalTime
     #define ParamBASE_InternalTime 0
 #endif
 namespace OpenKNX
@@ -34,7 +34,6 @@ namespace OpenKNX
             setenv("TZ", timezoneString, 1);
             tzset();
 
-           
             logDebugP("    Calculated-> X X <- Expected");
             logDebugP("29.3.2024 23:59 %2d  0", (int)isDaylightSavingTime(2024, 3, 29, 23, 59));
             logDebugP("30.3.2024 00:00 %2d  0", (int)isDaylightSavingTime(2024, 3, 30, 0, 0));

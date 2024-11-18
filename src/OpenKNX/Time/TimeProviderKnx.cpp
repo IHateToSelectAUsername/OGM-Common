@@ -33,7 +33,7 @@ namespace OpenKNX
 
                     if (!_hasTime)
                         logInfoP("Wait for %s diagram time", prefix);
-                        
+
                     if (!_hasDaylightSavingFlag && ParamBASE_SummertimeAll == 0)
                         logInfoP("Wait for %s diagram daylightsaving", prefix);
                 }
@@ -72,7 +72,7 @@ namespace OpenKNX
                 case WaitStates::InitialReadRepeat:
                 {
                     // read on start
-                    if (_waitTimerStart != 0 && delayCheckMillis(_waitTimerStart,  (unsigned long) (_waitStates == WaitStates::InitialRead ? InitialReadAfterInMs : DelayInitialReadInMs)))
+                    if (_waitTimerStart != 0 && delayCheckMillis(_waitTimerStart, (unsigned long)(_waitStates == WaitStates::InitialRead ? InitialReadAfterInMs : DelayInitialReadInMs)))
                     {
                         _waitStates = WaitStates::InitialReadRepeat;
                         if (_hasDate && _hasTime)
