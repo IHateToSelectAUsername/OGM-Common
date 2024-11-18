@@ -10,12 +10,13 @@ namespace OpenKNX
     {
         const std::string TimeProviderKnx::logPrefix()
         {
-            return std::string("KnxTime");
+            return std::string("Time<KNX>");
         }
 
         void TimeProviderKnx::logInformation()
         {
-            logInfoP("Timeprovider: KNX");
+            logInfo("Time", "Timeprovider: KNX");
+            logIndentUp();
             switch (_waitStates)
             {
                 case WaitStates::InitialRead:
@@ -29,13 +30,16 @@ namespace OpenKNX
                         else
                             logInfoP("Wait for %s diagram date", prefix);
                     }
+
                     if (!_hasTime)
                         logInfoP("Wait for %s diagram time", prefix);
+                        
                     if (!_hasDaylightSavingFlag && ParamBASE_SummertimeAll == 0)
                         logInfoP("Wait for %s diagram daylightsaving", prefix);
                 }
                 break;
             }
+            logIndentDown();
         }
 
         void TimeProviderKnx::setup()
