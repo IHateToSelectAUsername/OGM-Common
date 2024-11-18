@@ -243,6 +243,14 @@ namespace OpenKNX
         }
     #endif
 #endif
+        else if (openknx.time.processCommand(cmd, diagnoseKo))
+        {
+           return true;
+        }
+        else if (openknx.sun.processCommand(cmd, diagnoseKo))
+        {
+           return true;
+        }
         else
         {
             // check modules for command
@@ -475,6 +483,15 @@ namespace OpenKNX
         printHelpLine("bcu mon", "Start BCU monitoring");
         printHelpLine("bcu rst", "Reset BCU");
 #endif
+#ifdef OPENKNX_TIME_DIGAGNOSTIC       
+        printHelpLine("tm ?", "Help for time related commands");
+#else
+        printHelpLine("tm", "Show time information");
+#ifdef OPENKNX_TIME_TESTCOMMAND
+        printHelpLine("tm test", "Test some calculation)");
+#endif 
+#endif
+        printHelpLine("sun", "Shows sun information");
 
         for (uint8_t i = 0; i < openknx.modules.count; i++)
             openknx.modules.list[i]->showHelp();
