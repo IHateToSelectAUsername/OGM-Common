@@ -2,6 +2,9 @@
 #include "OpenKNX/Facade.h"
 #include "OpenKNX/Stat/RuntimeStat.h"
 
+#ifndef ParamBASE_InternalTime 
+    #define ParamBASE_InternalTime 0
+#endif
 #ifndef OPENKNX_TimeProvider
     #ifdef BASE_KoTime
         #include "OpenKNX/Time/TimeProviderKnx.h"
