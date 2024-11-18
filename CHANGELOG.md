@@ -1,5 +1,9 @@
 # Changes
 
+## 1.3.x:
+
+* Update: RP2040 Platform to Core 4.2.1
+
 ## 1.2.1: 2024-11-18
 * Update: RP2040 Platform to Core 4.1.1 + Rpi Base Platform
 * Add: Now allows you to delete the KNX or OpenKNX flash area on all platforms
