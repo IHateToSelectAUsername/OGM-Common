@@ -44,7 +44,7 @@ namespace OpenKNX
         // CPU Temperatur
         float cpuTemperature();
 
-#ifdef ARDUINO_ARCH_RP2040
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
         // Filesystem
         void initFilesystem();
 #endif
