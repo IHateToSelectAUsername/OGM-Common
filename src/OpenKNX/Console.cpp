@@ -179,15 +179,9 @@ namespace OpenKNX
         else if (!diagnoseKo && (cmd == "file dummy"))
         {
             const char* buffer = "DUMMY";
-#ifdef ARDUINO_ARCH_RP2040
-            File file = LittleFS.open("dummy.dummy", "a");
-            file.seek(rp2040.hwrand32());
-            file.write(buffer);
-#else
-            File file = LittleFS.open("/dummy.dummy", "a", true);
-            file.seek(esp_random());
+            File file = LittleFS.open("/dummy.dummy", "a");
+            file.seek((uint32_t) random());
             file.write((const uint8_t*) buffer, strlen(buffer));
-#endif
             file.close();
             showFilesystem();
         }
@@ -403,20 +397,7 @@ namespace OpenKNX
         logBegin();
         openknx.logger.logWithPrefixAndValues("Filesystem", "%s", path.c_str());
 
-#ifdef ARDUINO_ARCH_RP2040
-        Dir directory = LittleFS.openDir(path.c_str());
-        while (directory.next())
-        {
-            std::string full = path + directory.fileName().c_str();
-            if (directory.isDirectory())
-                showFilesystemDirectory(full + "/");
-            else
-            {
-                openknx.logger.logWithPrefixAndValues("Filesystem", "%s (%i bytes)", full.c_str(), directory.fileSize());
-            }
-        }
-#else
-        File rootDir = LittleFS.open(path.c_str());
+        File rootDir = LittleFS.open(path.c_str(), "r");
         File directory = rootDir.openNextFile();
         while(directory)
         {
@@ -429,8 +410,6 @@ namespace OpenKNX
             }
             directory = directory.openNextFile();
         }
-#endif
-       
         logEnd();
     }
 #endif
