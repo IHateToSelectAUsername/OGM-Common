@@ -408,7 +408,7 @@ namespace OpenKNX
             {
                 openknx.logger.logWithPrefixAndValues("Filesystem", "%s (%i bytes)", full.c_str(), directory.size());
             }
-            directory = directory.openNextFile();
+            directory = rootDir.openNextFile();
         }
         logEnd();
     }
