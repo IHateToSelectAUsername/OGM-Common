@@ -191,10 +191,6 @@ namespace OpenKNX
         {
             resetToBootloader();
         }
-        else if (!diagnoseKo && (cmd == "bootloader"))
-        {
-            resetToBootloader();
-        }
 #endif
         else if (!diagnoseKo && (cmd == "erase knx"))
         {
