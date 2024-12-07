@@ -42,6 +42,8 @@ namespace OpenKNX
         void showWatchdogResets(bool diagnoseKo = false);
 #ifdef ARDUINO_ARCH_RP2040
         void resetToBootloader();
+#endif
+#if OPENKNX_LITTLE_FS
         void showFilesystem();
         void showFilesystemDirectory(std::string path);
 #endif

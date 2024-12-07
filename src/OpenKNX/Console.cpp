@@ -2,7 +2,7 @@
 #include "OpenKNX/Facade.h"
 #include "OpenKNX/Flash/Driver.h"
 
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
     #include "LittleFS.h"
 #endif
 
@@ -171,19 +171,22 @@ namespace OpenKNX
             showWatchdogResets(diagnoseKo);
         }
 #endif
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         else if (!diagnoseKo && (cmd == "fs" || cmd == "files"))
         {
             showFilesystem();
         }
         else if (!diagnoseKo && (cmd == "file dummy"))
         {
-            File file = LittleFS.open("dummy.dummy", "a");
-            file.seek(rp2040.hwrand32());
-            file.write("DUMMY");
+            const char* buffer = "DUMMY";
+            File file = LittleFS.open("/dummy.dummy", "a");
+            file.seek((uint32_t) random());
+            file.write((const uint8_t*) buffer, strlen(buffer));
             file.close();
             showFilesystem();
         }
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         else if (!diagnoseKo && (cmd == "bootloader"))
         {
             resetToBootloader();
@@ -197,7 +200,7 @@ namespace OpenKNX
         {
             erase(EraseMode::OpenKnxFlash);
         }
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         else if (!diagnoseKo && (cmd == "erase files"))
         {
             erase(EraseMode::Filesystem);
@@ -386,7 +389,7 @@ namespace OpenKNX
     }
 #endif
 
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
     void Console::showFilesystem()
     {
         logBegin();
@@ -405,17 +408,18 @@ namespace OpenKNX
         logBegin();
         openknx.logger.logWithPrefixAndValues("Filesystem", "%s", path.c_str());
 
-        Dir directory = LittleFS.openDir(path.c_str());
-
-        while (directory.next())
+        File rootDir = LittleFS.open(path.c_str(), "r");
+        File directory = rootDir.openNextFile();
+        while(directory)
         {
-            std::string full = path + directory.fileName().c_str();
+            std::string full = path + directory.name();
             if (directory.isDirectory())
                 showFilesystemDirectory(full + "/");
             else
             {
-                openknx.logger.logWithPrefixAndValues("Filesystem", "%s (%i bytes)", full.c_str(), directory.fileSize());
+                openknx.logger.logWithPrefixAndValues("Filesystem", "%s (%i bytes)", full.c_str(), directory.size());
             }
+            directory = rootDir.openNextFile();
         }
         logEnd();
     }
@@ -461,7 +465,7 @@ namespace OpenKNX
         printHelpLine("mem 0xXXXXXXXX", "Show memory content (64byte) starting at 0xXXXXXXXX");
         printHelpLine("flash knx", "Show knx flash content");
         printHelpLine("flash openknx", "Show openknx flash content");
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         printHelpLine("files, fs", "Show files on filesystem");
 #endif
 #ifdef OPENKNX_RUNTIME_STAT
@@ -480,9 +484,13 @@ namespace OpenKNX
 #endif
         printHelpLine("erase knx", "Erase knx parameters");
         printHelpLine("erase openknx", "Erase openknx module data");
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         printHelpLine("erase files", "Erase filesystem");
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         printHelpLine("erase all", "Erase all");
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         printHelpLine("bootloader", "Reset into Bootloader Mode");
 #endif
 #ifndef ARDUINO_ARCH_SAMD
@@ -653,7 +661,7 @@ namespace OpenKNX
             openknx.openknxFlash.erase();
         }
 
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         if (mode == EraseMode::All || mode == EraseMode::Filesystem)
         {
             openknx.logger.logWithPrefix("Erase", "Format Filesystem");
@@ -662,7 +670,8 @@ namespace OpenKNX
                 openknx.logger.logWithPrefix("Erase", "Succesful");
             }
         }
-
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         if (mode == EraseMode::All)
         {
             openknx.logger.logWithPrefix("Erase", "First bytes of Firmware");
