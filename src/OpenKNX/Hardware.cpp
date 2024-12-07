@@ -1,6 +1,6 @@
 #include "OpenKNX/Facade.h"
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
     #include "LittleFS.h"
 #endif
 
@@ -33,7 +33,7 @@ namespace OpenKNX
         adc_init();
         adc_set_temp_sensor_enabled(true);
 #endif
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         initFilesystem();
 #endif
     }
@@ -159,7 +159,7 @@ namespace OpenKNX
         logIndentDown();
     }
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
     void Hardware::initFilesystem()
     {
 

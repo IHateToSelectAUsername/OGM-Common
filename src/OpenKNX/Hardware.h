@@ -1,4 +1,5 @@
 #pragma once
+#include "OpenKNX/defines.h"
 #include "OpenKNX/Button.h"
 #ifdef OPENKNX_SERIALLED_ENABLE
     #include "OpenKNX/Led/Serial.h"
@@ -44,7 +45,7 @@ namespace OpenKNX
         // CPU Temperatur
         float cpuTemperature();
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         // Filesystem
         void initFilesystem();
 #endif

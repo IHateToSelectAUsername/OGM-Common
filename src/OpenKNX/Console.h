@@ -43,7 +43,7 @@ namespace OpenKNX
 #ifdef ARDUINO_ARCH_RP2040
         void resetToBootloader();
 #endif
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         void showFilesystem();
         void showFilesystemDirectory(std::string path);
 #endif

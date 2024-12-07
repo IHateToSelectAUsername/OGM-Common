@@ -25,6 +25,14 @@
     #define OPENKNX_WAIT_FOR_SERIAL 2000
 #endif
 
+#ifndef OPENKNX_LITTLE_FS
+    #if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+        #define OPENKNX_LITTLE_FS true
+    #else
+        #define OPENKNX_LITTLE_FS false
+    #endif
+#endif
+
 // Priority active?
 #ifdef OPENKNX_HEARTBEAT_PRIO
 

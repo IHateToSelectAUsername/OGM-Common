@@ -2,7 +2,7 @@
 #include "OpenKNX/Facade.h"
 #include "OpenKNX/Flash/Driver.h"
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
     #include "LittleFS.h"
 #endif
 
@@ -171,7 +171,7 @@ namespace OpenKNX
             showWatchdogResets(diagnoseKo);
         }
 #endif
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         else if (!diagnoseKo && (cmd == "fs" || cmd == "files"))
         {
             showFilesystem();
@@ -200,7 +200,7 @@ namespace OpenKNX
         {
             erase(EraseMode::OpenKnxFlash);
         }
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         else if (!diagnoseKo && (cmd == "erase files"))
         {
             erase(EraseMode::Filesystem);
@@ -374,7 +374,7 @@ namespace OpenKNX
     }
 #endif
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
     void Console::showFilesystem()
     {
         logBegin();
@@ -450,7 +450,7 @@ namespace OpenKNX
         printHelpLine("mem 0xXXXXXXXX", "Show memory content (64byte) starting at 0xXXXXXXXX");
         printHelpLine("flash knx", "Show knx flash content");
         printHelpLine("flash openknx", "Show openknx flash content");
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         printHelpLine("files, fs", "Show files on filesystem");
 #endif
 #ifdef OPENKNX_RUNTIME_STAT
@@ -469,7 +469,7 @@ namespace OpenKNX
 #endif
         printHelpLine("erase knx", "Erase knx parameters");
         printHelpLine("erase openknx", "Erase openknx module data");
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         printHelpLine("erase files", "Erase filesystem");
 #endif
 #ifdef ARDUINO_ARCH_RP2040
@@ -646,7 +646,7 @@ namespace OpenKNX
             openknx.openknxFlash.erase();
         }
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if OPENKNX_LITTLE_FS
         if (mode == EraseMode::All || mode == EraseMode::Filesystem)
         {
             openknx.logger.logWithPrefix("Erase", "Format Filesystem");
