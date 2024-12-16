@@ -6,7 +6,10 @@ extern uint32_t __etext;
 extern uint32_t __data_start__;
 extern uint32_t __data_end__;
 #elif defined(ARDUINO_ARCH_ESP32)
-// ToDo: Implementation for ESP32
+#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "spi_flash_mmap.h"
+#include "esp_flash.h" 
+#endif
 #else
 extern uint32_t _EEPROM_start;
 extern uint32_t _FS_start;
@@ -42,7 +45,17 @@ namespace OpenKNX
             _sectorSize = SPI_FLASH_SEC_SIZE;
             _pageSize = 256;
             _startFree = 0;
+
+#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+            uint32_t size_flash_chip;
+            esp_flash_get_size(nullptr, &size_flash_chip);
+            _endFree = size_flash_chip; // value wrong but needed vor validation
+#else
+
             _endFree = spi_flash_get_chip_size(); // value wrong but needed vor validation
+#endif
+
+
             spi_flash_mmap_handle_t *out_handle;
             spi_flash_mmap(_offset, _size, SPI_FLASH_MMAP_DATA, (const void **)&_mmap, (spi_flash_mmap_handle_t *)&out_handle);
 
@@ -367,7 +380,11 @@ namespace OpenKNX
             {
             }
 #elif defined(ARDUINO_ARCH_ESP32)
+#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+            esp_flash_erase_region(nullptr, ((size_t)_offset + (sector * _sectorSize)), _sectorSize);
+#else
             spi_flash_erase_range(((size_t)_offset + (sector * _sectorSize)), _sectorSize);
+#endif
 #elif defined(ARDUINO_ARCH_RP2040)
             noInterrupts();
             rp2040.idleOtherCore();
@@ -444,7 +461,11 @@ namespace OpenKNX
 
                 // Changes Found
                 if (currentSize > 0)
+#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+                    esp_flash_write(nullptr, (const void*) (_offset + (_bufferSector * _sectorSize) + currentPosition), (uint32_t) _buffer + currentPosition, currentSize);
+#else
                     spi_flash_write((size_t)(_offset + (_bufferSector * _sectorSize) + currentPosition), _buffer + currentPosition, currentSize);
+#endif
                 // flash_range_program((intptr_t)(_offset + (_bufferSector * _sectorSize) + currentPosition), _buffer + currentPosition, currentSize);
 
                 currentPosition += currentSize + _pageSize;
