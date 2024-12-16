@@ -2,7 +2,7 @@
 #include "OpenKNX/Facade.h"
 #include "OpenKNX/Stat/RuntimeStat.h"
 
-#ifndef ParamBASE_InternalTime 
+#ifndef ParamBASE_InternalTime
     #define ParamBASE_InternalTime 0
 #endif
 #ifndef OPENKNX_TimeProvider
@@ -51,8 +51,6 @@ namespace OpenKNX
 
         debugWait();
 
-        if (openknx.watchdog.lastReset()) logErrorP("Restarted by watchdog");
-
         logInfoP("Init firmware");
 
 #ifdef OPENKNX_DEBUG
@@ -63,7 +61,16 @@ namespace OpenKNX
         openknx.info.serialNumber(knx.platform().uniqueSerialNumber());
         openknx.info.firmwareRevision(firmwareRevision);
 
+        if (openknx.watchdog.lastReset()) logErrorP("Restarted by watchdog");
+        openknx.watchdog.activate();
+        openknx.watchdog.fastCheck();
+
         initKnx();
+
+#ifdef OPENKNX_WATCHDOG
+        if (knx.configured() && !ParamBASE_Watchdog)
+            openknx.watchdog.deactivate();
+#endif
 
         openknx.hardware.init();
     }
@@ -255,10 +262,6 @@ namespace OpenKNX
         knx.start();
         openknx.hardware.initKnxRxISR();
 
-#ifdef OPENKNX_WATCHDOG
-        if (ParamBASE_Watchdog) openknx.watchdog.activate();
-#endif
-
         // register callbacks
         registerCallbacks();
 
@@ -285,6 +288,9 @@ namespace OpenKNX
 #ifndef OPENKNX_DUALCORE
         openknx.progLed.off();
 #endif
+
+        if (!knx.configured()) // fallback if unconfigured
+            openknx.console.showInformations();
     }
 
 #ifdef OPENKNX_DUALCORE
@@ -714,7 +720,6 @@ namespace OpenKNX
             openknx.modules.list[i]->processBeforeRestart();
         }
 
-        openknx.watchdog.safeRestart();
         openknx.flash.save();
         logIndentDown();
     }
@@ -855,7 +860,6 @@ namespace OpenKNX
     {
         logInfoP("System will restart now");
         delay(10);
-        openknx.watchdog.safeRestart();
         knx.platform().restart();
     }
 

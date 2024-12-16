@@ -9,7 +9,6 @@
     #include <Regexp.h>
 #endif
 
-
 namespace OpenKNX
 {
     namespace Log
@@ -416,9 +415,11 @@ namespace OpenKNX
 
         void Logger::printTimestamp()
         {
+#ifndef ARDUINO_ARCH_SAMD
             if (openknx.time.isValid())
                 OPENKNX_LOGGER_DEVICE.printf("%04i-%02i-%02i %02i:%02i:%02i", openknx.time.getUtcTime().year, openknx.time.getUtcTime().month, openknx.time.getUtcTime().day, openknx.time.getUtcTime().hour, openknx.time.getUtcTime().minute, openknx.time.getUtcTime().second);
             else
+#endif
                 OPENKNX_LOGGER_DEVICE.print(buildUptime().c_str());
             OPENKNX_LOGGER_DEVICE.print(": ");
         }
