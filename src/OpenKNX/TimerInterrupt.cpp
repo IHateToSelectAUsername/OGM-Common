@@ -28,9 +28,10 @@
     #undef SELECTED_TIMER
 
     #ifdef ARDUINO_ARCH_ESP32
-        #if OPENKNX_TIMER_INTERRUPT >= 0 && OPENKNX_TIMER_INTERRUPT <= 3
-            #define SELECTED_TIMER OPENKNX_TIMER_INTERRUPT
-        #endif
+        #define SELECTED_TIMER FREERTOS
+    //     #if OPENKNX_TIMER_INTERRUPT >= 0 && OPENKNX_TIMER_INTERRUPT <= 3
+    //         #define SELECTED_TIMER OPENKNX_TIMER_INTERRUPT
+    //     #endif
     #endif
 
     #ifdef ARDUINO_ARCH_SAMD
@@ -76,8 +77,8 @@
     // Select Timer Interrupt
     #if defined(ARDUINO_ARCH_SAMD)
 SAMDTimer ITimer(SELECTED_TIMER);
-    #elif defined(ARDUINO_ARCH_ESP32)
-ESP32Timer ITimer(SELECTED_TIMER);
+    //     #elif defined(ARDUINO_ARCH_ESP32)
+    // ESP32Timer ITimer(SELECTED_TIMER);
     #endif
 
 #endif
@@ -111,11 +112,16 @@ namespace OpenKNX
         ITimer.attachInterruptInterval_MS(OPENKNX_INTERRUPT_TIMER_MS, []() -> void {
             openknx.timerInterrupt.interrupt();
         });
-#elif defined(ARDUINO_ARCH_ESP32)
-        ITimer.attachInterrupt(OPENKNX_INTERRUPT_TIMER_MS * 1000, [](void *t) -> bool {
-            openknx.timerInterrupt.interrupt();
-            return true;
-        });
+#elif SELECTED_TIMER == FREERTOS
+    #ifdef ARDUINO_ARCH_ESP32
+        xTaskCreatePinnedToCore([](void* parms) {
+                for (;;)
+                {
+                    const TickType_t xTimerPeriod = pdMS_TO_TICKS(OPENKNX_INTERRUPT_TIMER_MS);
+                    openknx.timerInterrupt.interrupt();
+                    vTaskDelay(xTimerPeriod);
+                } }, "PseudoTimer0", 4096, NULL, 1, NULL, xPortGetCoreID());
+    #endif
 #endif
     }
 
@@ -124,9 +130,7 @@ namespace OpenKNX
         _time = millis();
 
         processStats();
-#ifndef OPENKNX_SERIALLED_ENABLE
         processLeds();
-#endif
         processButtons();
     }
 
@@ -151,24 +155,27 @@ namespace OpenKNX
         openknx.func3Button.loop();
 #endif
     }
+
     void TimerInterrupt::processLeds()
     {
+#ifndef ARDUINO_ARCH_ESP32
         if (_time % 2)
         {
             openknx.progLed.loop();
-#ifdef INFO2_LED_PIN
+    #ifdef INFO2_LED_PIN
             openknx.info2Led.loop();
-#endif
+    #endif
         }
         else
         {
-#ifdef INFO1_LED_PIN
+    #ifdef INFO1_LED_PIN
             openknx.info1Led.loop();
-#endif
-#ifdef INFO3_LED_PIN
+    #endif
+    #ifdef INFO3_LED_PIN
             openknx.info3Led.loop();
-#endif
+    #endif
         }
+#endif
     }
 
 #ifdef ARDUINO_ARCH_RP2040
@@ -184,6 +191,16 @@ namespace OpenKNX
     #ifdef ARDUINO_ARCH_RP2040
         _alarmPool1 = alarm_pool_create(2, 16);
         alarm_pool_add_repeating_timer_ms(_alarmPool1, -OPENKNX_INTERRUPT_TIMER_MS, timerInterruptCallback1, NULL, &_repeatingTimer1);
+    #elif SELECTED_TIMER == FREERTOS
+        #ifdef ARDUINO_ARCH_ESP32
+        xTaskCreatePinnedToCore([](void *parms) {
+            for (;;)
+            {
+                const TickType_t xTimerPeriod = pdMS_TO_TICKS(OPENKNX_INTERRUPT_TIMER_MS);
+                openknx.timerInterrupt.interrupt1();
+                vTaskDelay(xTimerPeriod);
+            } }, "PseudoTimer1", 4096, NULL, 1, NULL, xPortGetCoreID());
+        #endif
     #endif
     }
 
