@@ -8,6 +8,13 @@
 #include "OpenKNX/Log/Logger.h"
 #include "OpenKNX/Module.h"
 #include "OpenKNX/Watchdog.h"
+#include "OpenKNX/Time/TimeManager.h"
+#include "OpenKNX/Time/TimeProvider.h"
+#include "OpenKNX/Time/Calendar.h"
+#ifdef ParamBASE_Latitude
+        #include "OpenKNX/Sun/SunCalculation.h"
+#endif
+
 #ifdef OPENKNX_RUNTIME_STAT
     #include "OpenKNX/Stat/RuntimeStat.h"
 #endif
@@ -41,6 +48,11 @@ namespace OpenKNX
         TimerInterrupt timerInterrupt;
         Hardware hardware;
         Watchdog watchdog;
+        Time::TimeManager time;
+#ifdef ParamBASE_Latitude
+        Sun::SunCalculation sun;
+#endif
+        Time::Calendar calendar;
 
         Button progButton = Button("Prog");
 #ifdef FUNC1_BUTTON_PIN

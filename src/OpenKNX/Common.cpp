@@ -2,6 +2,16 @@
 #include "OpenKNX/Facade.h"
 #include "OpenKNX/Stat/RuntimeStat.h"
 
+#ifndef ParamBASE_InternalTime
+    #define ParamBASE_InternalTime 0
+#endif
+#ifndef OPENKNX_TimeProvider
+    #ifdef BASE_KoTime
+        #include "OpenKNX/Time/TimeProviderKnx.h"
+        #define OPENKNX_TimeProvider Time::TimeProviderKnx
+    #endif
+#endif
+
 #if defined(OPENKNX_DUALCORE) && defined(ARDUINO_ARCH_ESP32)
 extern void loop1();
 extern void setup1();
@@ -41,8 +51,6 @@ namespace OpenKNX
 
         debugWait();
 
-        if (openknx.watchdog.lastReset()) logErrorP("Restarted by watchdog");
-
         logInfoP("Init firmware");
 
 #ifdef OPENKNX_DEBUG
@@ -53,7 +61,16 @@ namespace OpenKNX
         openknx.info.serialNumber(knx.platform().uniqueSerialNumber());
         openknx.info.firmwareRevision(firmwareRevision);
 
+        if (openknx.watchdog.lastReset()) logErrorP("Restarted by watchdog");
+        openknx.watchdog.activate();
+        openknx.watchdog.fastCheck();
+
         initKnx();
+
+#ifdef OPENKNX_WATCHDOG
+        if (knx.configured() && !ParamBASE_Watchdog)
+            openknx.watchdog.deactivate();
+#endif
 
         openknx.hardware.init();
     }
@@ -219,6 +236,13 @@ namespace OpenKNX
         for (uint8_t i = 0; i < openknx.modules.count; i++)
             openknx.modules.list[i]->init();
 
+        bool configured = knx.configured();
+        openknx.time.setup(configured);
+
+#ifdef OPENKNX_TimeProvider
+        if (!openknx.time.hasTimerProvder() && !ParamBASE_InternalTime)
+            openknx.time.setTimeProvider(new OPENKNX_TimeProvider());
+#endif
 #ifdef BASE_StartupDelayBase
         _startupDelay = millis();
 #endif
@@ -227,8 +251,6 @@ namespace OpenKNX
         // pre setup complete
         openknx.info1Led.off();
 #endif
-
-        bool configured = knx.configured();
 
         // Handle setup of modules
         for (uint8_t i = 0; i < openknx.modules.count; i++)
@@ -239,10 +261,6 @@ namespace OpenKNX
         // start the framework + isr if needed
         knx.start();
         openknx.hardware.initKnxRxISR();
-
-#ifdef OPENKNX_WATCHDOG
-        if (ParamBASE_Watchdog) openknx.watchdog.activate();
-#endif
 
         // register callbacks
         registerCallbacks();
@@ -267,11 +285,12 @@ namespace OpenKNX
                 delay(1);
 #endif // OPENKNX_DUALCORE
 
-        openknx.logger.logOpenKnxHeader();
-
 #ifndef OPENKNX_DUALCORE
         openknx.progLed.off();
 #endif
+
+        if (!knx.configured()) // fallback if unconfigured
+            openknx.console.showInformations();
     }
 
 #ifdef OPENKNX_DUALCORE
@@ -330,7 +349,6 @@ namespace OpenKNX
 #ifdef OPENKNX_LOOPTIME_WARNING
         uint32_t start = millis();
 #endif
-
         // loop console helper
         RUNTIME_MEASURE_BEGIN(_runtimeConsole);
         openknx.console.loop();
@@ -340,6 +358,22 @@ namespace OpenKNX
         RUNTIME_MEASURE_BEGIN(_runtimeKnxStack);
         knx.loop();
         RUNTIME_MEASURE_END(_runtimeKnxStack);
+
+        // loop timemanager helper
+        RUNTIME_MEASURE_BEGIN(_runtimeTimeManager);
+        openknx.time.loop();
+        RUNTIME_MEASURE_END(_runtimeTimeManager);
+        // loop timemanager helper
+        RUNTIME_MEASURE_BEGIN(_runtimeSunCalculation);
+#ifdef ParamBASE_Latitude
+        openknx.sun.loop();
+#endif
+        RUNTIME_MEASURE_END(_runtimeSunCalculation);
+#ifdef KoBASE_Date // HACK to prevent read telegrams from logic and common. Can be removed if logic is updated to use the time from common
+        bool checkForDateRead = !openknx.time._disableKoRead && knx.configured() && !ParamBASE_InternalTime;
+        if (checkForDateRead && KoBASE_Date.commFlag() == ComFlag::ReadRequest)
+            checkForDateRead = false;
+#endif
 
         // loop  appstack
         _loopMicros = micros();
@@ -373,6 +407,15 @@ namespace OpenKNX
         {
             logErrorP("Warning: The loop took longer than usual (%i >= %i)", (millis() - start), OPENKNX_LOOPTIME_WARNING);
             _lastLooptimeWarning = millis();
+        }
+#endif
+#ifdef KoBASE_Date // HACK to prevent read telegrams from logic and common. Can be removed if logic is updated to use the time from common
+        if (checkForDateRead && KoBASE_Date.commFlag() == ComFlag::ReadRequest)
+        {
+            logErrorP("Disable time KO' reads in Common because the LogicModule is old and sent the read request");
+            openknx.time._disableKoRead = true;
+            if (openknx.time.hasTimerProvder())
+                openknx.time.getTimeProvder()->_disableKoRead = true;
         }
 #endif
     }
@@ -509,7 +552,9 @@ namespace OpenKNX
             return;
 #endif
 
-        logInfoP("processAfterStartupDelay");
+        logDebugP("processAfterStartupDelay");
+        openknx.console.showInformations();
+        openknx.logger.log("Type \"help\" to view a list of available commands.");
         logIndentUp();
 
         _afterStartupDelay = true;
@@ -675,7 +720,6 @@ namespace OpenKNX
             openknx.modules.list[i]->processBeforeRestart();
         }
 
-        openknx.watchdog.safeRestart();
         openknx.flash.save();
         logIndentDown();
     }
@@ -705,6 +749,7 @@ namespace OpenKNX
         if (ko.asap() == BASE_KoManualSave)
             return processSaveKo(ko);
     #endif
+        openknx.time.processInputKo(ko);
 
         for (uint8_t i = 0; i < openknx.modules.count; i++)
         {
@@ -815,7 +860,6 @@ namespace OpenKNX
     {
         logInfoP("System will restart now");
         delay(10);
-        openknx.watchdog.safeRestart();
         knx.platform().restart();
     }
 
@@ -830,6 +874,8 @@ namespace OpenKNX
             _runtimeLoop.showStat("___Loop", 0, stat, hist);
             _runtimeConsole.showStat("__Console", 0, stat, hist);
             _runtimeKnxStack.showStat("__KnxStack", 0, stat, hist);
+            _runtimeTimeManager.showStat("__Time", 0, stat, hist);
+            _runtimeSunCalculation.showStat("__Sun", 0, stat, hist);
             _runtimeModuleLoop.showStat("_All_Modules_Loop", 0, stat, hist);
             for (uint8_t i = 0; i < openknx.modules.count; i++)
             {

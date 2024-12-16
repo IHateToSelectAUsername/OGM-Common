@@ -2,7 +2,7 @@
 #include "OpenKNX/Facade.h"
 #include "OpenKNX/Flash/Driver.h"
 
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
     #include "LittleFS.h"
 #endif
 
@@ -15,23 +15,35 @@ namespace OpenKNX
     }
 
 #ifdef BASE_KoDiagnose
-    void Console::writeDiagenoseKo(const char* message, ...)
+    void Console::writeDiagnoseKo(const char* message, va_list& values)
     {
-        va_list values;
-        va_start(values, message);
-
         char buffer[15] = {}; // Last byte must be zero!
         uint8_t len = vsnprintf(buffer, 15, message, values);
 
         if (len >= 15)
-            openknx.hardware.fatalError(FATAL_SYSTEM, "BufferOverflow: writeDiagenoseKo message too long");
-
-        va_end(values);
+            openknx.hardware.fatalError(FATAL_SYSTEM, "BufferOverflow: writeDiagnoseKo message too long");
 
         _diagnoseKoOutput = true;
         KoBASE_Diagnose.value(buffer, Dpt(16, 1));
         knx.loop();
         _diagnoseKoOutput = false;
+    }
+
+    void Console::writeDiagnoseKo(const char* message, ...)
+    {
+        va_list values;
+        va_start(values, message);
+        writeDiagnoseKo(message, values);
+        va_end(values);
+    }
+
+    // fallback for old spelling mistake in method name
+    void Console::writeDiagenoseKo(const char* message, ...)
+    {
+        va_list values;
+        va_start(values, message);
+        writeDiagnoseKo(message, values);
+        va_end(values);
     }
 
     void Console::processDiagnoseKo(GroupObject& ko)
@@ -159,19 +171,22 @@ namespace OpenKNX
             showWatchdogResets(diagnoseKo);
         }
 #endif
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         else if (!diagnoseKo && (cmd == "fs" || cmd == "files"))
         {
             showFilesystem();
         }
         else if (!diagnoseKo && (cmd == "file dummy"))
         {
-            File file = LittleFS.open("dummy.dummy", "a");
-            file.seek(rp2040.hwrand32());
-            file.write("DUMMY");
+            const char* buffer = "DUMMY";
+            File file = LittleFS.open("/dummy.dummy", "a");
+            file.seek((uint32_t)random());
+            file.write((const uint8_t*)buffer, strlen(buffer));
             file.close();
             showFilesystem();
         }
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         else if (!diagnoseKo && (cmd == "bootloader"))
         {
             resetToBootloader();
@@ -185,7 +200,7 @@ namespace OpenKNX
         {
             erase(EraseMode::OpenKnxFlash);
         }
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         else if (!diagnoseKo && (cmd == "erase files"))
         {
             erase(EraseMode::Filesystem);
@@ -230,6 +245,16 @@ namespace OpenKNX
             return true;
         }
     #endif
+#endif
+        else if (openknx.time.processCommand(cmd, diagnoseKo))
+        {
+            return true;
+        }
+#ifdef ParamBASE_Latitude
+        else if (openknx.sun.processCommand(cmd, diagnoseKo))
+        {
+            return true;
+        }
 #endif
         else
         {
@@ -289,35 +314,80 @@ namespace OpenKNX
 
     void Console::showInformations()
     {
-        logBegin();
-        openknx.logger.log("");
-        openknx.logger.color(CONSOLE_HEADLINE_COLOR);
-        openknx.logger.log("======================== Information ===========================================");
-        openknx.logger.color(0);
-        openknx.logger.logWithPrefix("KNX Address", openknx.info.humanIndividualAddress().c_str());
-        openknx.logger.logWithPrefixAndValues("Application (ETS)", "Number: %s  Version: %s  Configured: %i", openknx.info.humanApplicationNumber().c_str(), openknx.info.humanApplicationVersion().c_str(), knx.configured());
-        openknx.logger.logWithPrefixAndValues("Firmware", "Number: %s  Version: %s  Name: %s", openknx.info.humanFirmwareNumber().c_str(), openknx.info.humanFirmwareVersion().c_str(), MAIN_OrderNumber);
-        openknx.logger.logWithPrefix("Serial number", openknx.info.humanSerialNumber().c_str());
-#ifdef HARDWARE_NAME
-        openknx.logger.logWithPrefixAndValues("Board", "%s", HARDWARE_NAME);
-#endif
-
 #ifdef OPENKNX_DUALCORE
         const char* cpuMode = openknx.usesDualCore() ? "Dual-Core" : "Single-Core";
 #else
         const char* cpuMode = "Single-Core";
 #endif
 
+        logBegin();
+        openknx.logger.color(CONSOLE_HEADLINE_COLOR);
+        openknx.logger.log("================================================================================");
+        openknx.logger.color(0);
+        openknx.logger.log("");
+        openknx.logger.log("        \x1B[90mOpen \x1B[32m#\x1B[0m           OpenKNX.de");
+        openknx.logger.log("        \x1B[32m+----+\x1B[0m");
+        openknx.logger.log("        \x1B[32m# \x1B[37mKNX\x1B[0m            wiki.openknx.de - forum.openknx.de");
+        openknx.logger.log("");
+        openknx.logger.color(CONSOLE_HEADLINE_COLOR);
+        openknx.logger.log("======================== Information ===========================================");
+        openknx.logger.color(0);
+
+        openknx.logger.color(CONSOLE_HEADLINE_COLOR);
+        openknx.logger.log("Device");
+        openknx.logger.color(0);
+#ifdef DEVICE_ID
+        openknx.logger.logWithPrefix("ID", DEVICE_ID);
+#endif
+#ifdef DEVICE_NAME
+        openknx.logger.logWithPrefix("Name", DEVICE_NAME);
+#elif defined(HARDWARE_NAME)
+        openknx.logger.logWithPrefix("Name", HARDWARE_NAME);
+#endif
+        openknx.logger.logWithPrefix("Serial number", openknx.info.humanSerialNumber().c_str());
+
+        openknx.logger.color(CONSOLE_HEADLINE_COLOR);
+        openknx.logger.log("Firmware");
+        openknx.logger.color(0);
+#ifdef FIRMWARE_VARIANT
+        openknx.logger.logWithPrefixAndValues("  Name", "%s  (%s)", openknx.info.firmwareName().c_str(), FIRMWARE_VARIANT);
+#else
+        openknx.logger.logWithPrefix("Name", openknx.info.firmwareName().c_str());
+#endif
+        openknx.logger.logWithPrefix("Version", openknx.info.humanFirmwareVersion().c_str());
+        openknx.logger.logWithPrefix("Number", openknx.info.humanFirmwareNumber().c_str());
+#if MASK_VERSION == 0x07B0
+        openknx.logger.logWithPrefixAndValues("KNX-Type", "TP (%04X)", MASK_VERSION);
+#elif MASK_VERSION == 0x57B0
+        openknx.logger.logWithPrefixAndValues("KNX-Type", "IP (%04X)", MASK_VERSION);
+#elif MASK_VERSION == 0x091A
+        openknx.logger.logWithPrefixAndValues("KNX-Type", "Router (%04X)", MASK_VERSION);
+#else
+        openknx.logger.logWithPrefixAndValues("KNX-Type", "%04X", MASK_VERSION);
+#endif
         if (openknx.hardware.cpuTemperature() > 0)
             openknx.logger.logWithPrefixAndValues("CPU-Mode", "%s (Temperature %.1f °C)", cpuMode, openknx.hardware.cpuTemperature());
         else
             openknx.logger.logWithPrefixAndValues("CPU-Mode", "%s", cpuMode);
 
+        openknx.logger.color(CONSOLE_HEADLINE_COLOR);
+        openknx.logger.log("Programming");
+        openknx.logger.color(0);
+        openknx.logger.logWithPrefixAndValues("Address", "%s (%s)", openknx.info.humanIndividualAddress().c_str(), knx.configured() ? "Configured" : "Unconfigured");
+        if (openknx.info.applicationNumber() > 0)
+        {
+            openknx.logger.logWithPrefix("Version", openknx.info.humanApplicationVersion().c_str());
+            openknx.logger.logWithPrefix("Number", openknx.info.humanApplicationNumber().c_str());
+        }
+        openknx.logger.color(CONSOLE_HEADLINE_COLOR);
+        openknx.logger.log("Runtime");
+        openknx.logger.color(0);
+
         showMemory();
 
 #ifdef OPENKNX_WATCHDOG
         if (openknx.watchdog.active())
-            openknx.logger.logWithPrefixAndValues("Watchdog", "Running (%ims)", openknx.watchdog.maxPeriod());
+            openknx.logger.logWithPrefixAndValues("Watchdog", "Running (%is)", openknx.watchdog.maxPeriod());
         else
             openknx.logger.logWithPrefixAndValues("Watchdog", "Disabled");
 #else
@@ -339,9 +409,9 @@ namespace OpenKNX
         if (diagnoseKo)
         {
             if (openknx.watchdog.active())
-                openknx.console.writeDiagenoseKo("WD ON (%ix)", openknx.watchdog.resets());
+                openknx.console.writeDiagnoseKo("WD ON (%ix)", openknx.watchdog.resets());
             else
-                openknx.console.writeDiagenoseKo("WD OFF");
+                openknx.console.writeDiagnoseKo("WD OFF");
         }
     #endif
         if (openknx.watchdog.active())
@@ -351,7 +421,7 @@ namespace OpenKNX
     }
 #endif
 
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
     void Console::showFilesystem()
     {
         logBegin();
@@ -370,17 +440,18 @@ namespace OpenKNX
         logBegin();
         openknx.logger.logWithPrefixAndValues("Filesystem", "%s", path.c_str());
 
-        Dir directory = LittleFS.openDir(path.c_str());
-
-        while (directory.next())
+        File rootDir = LittleFS.open(path.c_str(), "r");
+        File directory = rootDir.openNextFile();
+        while (directory)
         {
-            std::string full = path + directory.fileName().c_str();
+            std::string full = path + directory.name();
             if (directory.isDirectory())
                 showFilesystemDirectory(full + "/");
             else
             {
-                openknx.logger.logWithPrefixAndValues("Filesystem", "%s (%i bytes)", full.c_str(), directory.fileSize());
+                openknx.logger.logWithPrefixAndValues("Filesystem", "%s (%i bytes)", full.c_str(), directory.size());
             }
+            directory = rootDir.openNextFile();
         }
         logEnd();
     }
@@ -426,7 +497,7 @@ namespace OpenKNX
         printHelpLine("mem 0xXXXXXXXX", "Show memory content (64byte) starting at 0xXXXXXXXX");
         printHelpLine("flash knx", "Show knx flash content");
         printHelpLine("flash openknx", "Show openknx flash content");
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         printHelpLine("files, fs", "Show files on filesystem");
 #endif
 #ifdef OPENKNX_RUNTIME_STAT
@@ -445,9 +516,13 @@ namespace OpenKNX
 #endif
         printHelpLine("erase knx", "Erase knx parameters");
         printHelpLine("erase openknx", "Erase openknx module data");
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         printHelpLine("erase files", "Erase filesystem");
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         printHelpLine("erase all", "Erase all");
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         printHelpLine("bootloader", "Reset into Bootloader Mode");
 #endif
 #ifndef ARDUINO_ARCH_SAMD
@@ -463,6 +538,15 @@ namespace OpenKNX
         printHelpLine("bcu mon", "Start BCU monitoring");
         printHelpLine("bcu rst", "Reset BCU");
 #endif
+#ifdef OPENKNX_TIME_DIGAGNOSTIC
+        printHelpLine("tm ?", "Help for time related commands");
+#else
+        printHelpLine("tm", "Show time information");
+    #ifdef OPENKNX_TIME_TESTCOMMAND
+        printHelpLine("tm test", "Test some calculation)");
+    #endif
+#endif
+        printHelpLine("sun", "Shows sun information");
 
         for (uint8_t i = 0; i < openknx.modules.count; i++)
             openknx.modules.list[i]->showHelp();
@@ -492,7 +576,7 @@ namespace OpenKNX
 #ifdef BASE_KoDiagnose
         if (diagnoseKo)
         {
-            openknx.console.writeDiagenoseKo("%s", uptimeStr.c_str());
+            openknx.console.writeDiagnoseKo("%s", uptimeStr.c_str());
         }
 #endif
         openknx.logger.logWithPrefixAndValues("Uptime", "%s", uptimeStr.c_str());
@@ -504,15 +588,15 @@ namespace OpenKNX
 #ifdef BASE_KoDiagnose
         if (diagnoseKo)
         {
-            openknx.console.writeDiagenoseKo("CUR %.3fKiB", ((float)freeMemory() / 1024));
-            openknx.console.writeDiagenoseKo("MIN %.3fKiB", ((float)openknx.common.freeMemoryMin() / 1024));
+            openknx.console.writeDiagnoseKo("CUR %.3fKiB", ((float)freeMemory() / 1024));
+            openknx.console.writeDiagnoseKo("MIN %.3fKiB", ((float)openknx.common.freeMemoryMin() / 1024));
         }
 #endif
         openknx.logger.logWithPrefixAndValues("Free memory", "%.3f KiB (min. %.3f KiB)", ((float)freeMemory() / 1024), ((float)openknx.common.freeMemoryMin() / 1024));
 #ifdef ARDUINO_ARCH_ESP32
-#if  BOARD_HAS_PSRAM
+    #if BOARD_HAS_PSRAM
         openknx.logger.logWithPrefixAndValues("Free PSRAM", "%.3f KiB (min. %.3f KiB)", ((float)ESP.getFreePsram() / 1024), ((float)ESP.getMinFreePsram() / 1024));
-#endif
+    #endif
     #ifdef OPENKNX_DUALCORE
         openknx.logger.logWithPrefixAndValues("Free stack size", "Loop0: %i bytes - Loop1: %i bytes", openknx.common.freeStackMin(), openknx.common.freeStackMin1());
     #else
@@ -609,7 +693,7 @@ namespace OpenKNX
             openknx.openknxFlash.erase();
         }
 
-#ifdef ARDUINO_ARCH_RP2040
+#if OPENKNX_LITTLE_FS
         if (mode == EraseMode::All || mode == EraseMode::Filesystem)
         {
             openknx.logger.logWithPrefix("Erase", "Format Filesystem");
@@ -618,7 +702,8 @@ namespace OpenKNX
                 openknx.logger.logWithPrefix("Erase", "Succesful");
             }
         }
-
+#endif
+#ifdef ARDUINO_ARCH_RP2040
         if (mode == EraseMode::All)
         {
             openknx.logger.logWithPrefix("Erase", "First bytes of Firmware");

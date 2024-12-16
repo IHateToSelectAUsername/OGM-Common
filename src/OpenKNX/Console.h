@@ -14,9 +14,9 @@ extern "C"
 
 #define CONSOLE_HEADLINE_COLOR 33
 #ifdef ARDUINO_ARCH_SAMD
-#define CONSOLE_INPUT_SIZE 14
+    #define CONSOLE_INPUT_SIZE 14
 #else
-#define CONSOLE_INPUT_SIZE 100
+    #define CONSOLE_INPUT_SIZE 100
 #endif
 
 namespace OpenKNX
@@ -42,12 +42,17 @@ namespace OpenKNX
         void showWatchdogResets(bool diagnoseKo = false);
 #ifdef ARDUINO_ARCH_RP2040
         void resetToBootloader();
+#endif
+#if OPENKNX_LITTLE_FS
         void showFilesystem();
         void showFilesystemDirectory(std::string path);
 #endif
         void erase(EraseMode mode = EraseMode::All);
 #ifndef ARDUINO_ARCH_SAMD
         void processPinCommand(const std::string& cmd);
+#endif
+#ifdef BASE_KoDiagnose
+        void writeDiagnoseKo(const char* message, va_list& values);
 #endif
 
       public:
@@ -68,6 +73,7 @@ namespace OpenKNX
 
 #ifdef BASE_KoDiagnose
         void processDiagnoseKo(GroupObject& ko);
+        void writeDiagnoseKo(const char* message, ...);
         void writeDiagenoseKo(const char* message, ...);
 #endif
     };

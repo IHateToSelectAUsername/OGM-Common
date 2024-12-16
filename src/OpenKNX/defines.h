@@ -25,6 +25,14 @@
     #define OPENKNX_WAIT_FOR_SERIAL 2000
 #endif
 
+#ifndef OPENKNX_LITTLE_FS
+    #if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+        #define OPENKNX_LITTLE_FS true
+    #else
+        #define OPENKNX_LITTLE_FS false
+    #endif
+#endif
+
 // Priority active?
 #ifdef OPENKNX_HEARTBEAT_PRIO
 
@@ -63,7 +71,7 @@
 #endif
 
 #ifndef OPENKNX_WATCHDOG_MAX_PERIOD
-    #define OPENKNX_WATCHDOG_MAX_PERIOD 16384
+    #define OPENKNX_WATCHDOG_MAX_PERIOD 16
 #endif
 
 #ifndef OPENKNX_RECOVERY_TIME
