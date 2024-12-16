@@ -1,9 +1,13 @@
 #pragma once
 #include <Arduino.h>
+
 #include "OpenKNX/defines.h"
 
-#ifdef OPENKNX_WATCHDOG
-    #include <Adafruit_SleepyDog.h>
+#ifndef OPENKNX_WATCHDOG_AUTOERASE_RESETS
+    #define OPENKNX_WATCHDOG_AUTOERASE_RESETS 5
+#endif
+#ifndef OPENKNX_WATCHDOG_AUTOERASE_TIMEOUT
+    #define OPENKNX_WATCHDOG_AUTOERASE_TIMEOUT 30
 #endif
 
 namespace OpenKNX
@@ -39,24 +43,30 @@ namespace OpenKNX
         bool lastReset();
 
         /*
-         * Reports that the follow-up restart is wanted
-         */
-        void safeRestart();
-
-        /*
          * Must be called regularly so that the watchdog does not strike
          */
         void loop();
 
         /*
-        * Returns the maximum time until the watchdog resets the device
-        */
+         * Returns the maximum time until the watchdog resets the device
+         */
         uint32_t maxPeriod();
-        
+
+        /*
+         * Called before knx init
+         */
+        void fastCheck();
+
+        String logPrefix()
+        {
+            return String("Watchdog");
+        };
+
         Watchdog();
 
       private:
         bool _active = false;
         bool _lastReset = false;
+        bool _first = true;
     };
 } // namespace OpenKNX

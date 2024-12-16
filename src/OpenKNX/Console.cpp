@@ -180,8 +180,8 @@ namespace OpenKNX
         {
             const char* buffer = "DUMMY";
             File file = LittleFS.open("/dummy.dummy", "a");
-            file.seek((uint32_t) random());
-            file.write((const uint8_t*) buffer, strlen(buffer));
+            file.seek((uint32_t)random());
+            file.write((const uint8_t*)buffer, strlen(buffer));
             file.close();
             showFilesystem();
         }
@@ -248,12 +248,12 @@ namespace OpenKNX
 #endif
         else if (openknx.time.processCommand(cmd, diagnoseKo))
         {
-           return true;
+            return true;
         }
 #ifdef ParamBASE_Latitude
         else if (openknx.sun.processCommand(cmd, diagnoseKo))
         {
-           return true;
+            return true;
         }
 #endif
         else
@@ -374,9 +374,11 @@ namespace OpenKNX
         openknx.logger.log("Programming");
         openknx.logger.color(0);
         openknx.logger.logWithPrefixAndValues("Address", "%s (%s)", openknx.info.humanIndividualAddress().c_str(), knx.configured() ? "Configured" : "Unconfigured");
-        openknx.logger.logWithPrefix("Version", openknx.info.humanApplicationVersion().c_str());
-        openknx.logger.logWithPrefix("Number", openknx.info.humanApplicationNumber().c_str());
-
+        if (openknx.info.applicationNumber() > 0)
+        {
+            openknx.logger.logWithPrefix("Version", openknx.info.humanApplicationVersion().c_str());
+            openknx.logger.logWithPrefix("Number", openknx.info.humanApplicationNumber().c_str());
+        }
         openknx.logger.color(CONSOLE_HEADLINE_COLOR);
         openknx.logger.log("Runtime");
         openknx.logger.color(0);
@@ -385,7 +387,7 @@ namespace OpenKNX
 
 #ifdef OPENKNX_WATCHDOG
         if (openknx.watchdog.active())
-            openknx.logger.logWithPrefixAndValues("Watchdog", "Running (%ims)", openknx.watchdog.maxPeriod());
+            openknx.logger.logWithPrefixAndValues("Watchdog", "Running (%is)", openknx.watchdog.maxPeriod());
         else
             openknx.logger.logWithPrefixAndValues("Watchdog", "Disabled");
 #else
@@ -440,7 +442,7 @@ namespace OpenKNX
 
         File rootDir = LittleFS.open(path.c_str(), "r");
         File directory = rootDir.openNextFile();
-        while(directory)
+        while (directory)
         {
             std::string full = path + directory.name();
             if (directory.isDirectory())
@@ -536,13 +538,13 @@ namespace OpenKNX
         printHelpLine("bcu mon", "Start BCU monitoring");
         printHelpLine("bcu rst", "Reset BCU");
 #endif
-#ifdef OPENKNX_TIME_DIGAGNOSTIC       
+#ifdef OPENKNX_TIME_DIGAGNOSTIC
         printHelpLine("tm ?", "Help for time related commands");
 #else
         printHelpLine("tm", "Show time information");
-#ifdef OPENKNX_TIME_TESTCOMMAND
+    #ifdef OPENKNX_TIME_TESTCOMMAND
         printHelpLine("tm test", "Test some calculation)");
-#endif 
+    #endif
 #endif
         printHelpLine("sun", "Shows sun information");
 
