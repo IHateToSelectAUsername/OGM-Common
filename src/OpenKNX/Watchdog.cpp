@@ -7,7 +7,6 @@
         #include <pico/time.h>
     #endif
     #ifdef ARDUINO_ARCH_ESP32
-        #include "esp_sleep.h"
         #include "esp_task_wdt.h"
     #endif
     #ifdef ARDUINO_ARCH_SAMD
@@ -211,7 +210,16 @@ namespace OpenKNX
         while (WDT->STATUS.bit.SYNCBUSY)
             ;
     #elif defined(ARDUINO_ARCH_ESP32)
-        esp_task_wdt_init(OPENKNX_WATCHDOG_MAX_PERIOD, true);
+
+        esp_task_wdt_config_t wdt_config = {
+            .timeout_ms = OPENKNX_WATCHDOG_MAX_PERIOD * 1000,
+            .idle_core_mask = 1,
+            .trigger_panic = true,
+        };
+
+        // Initialisiere den Watchdog mit der Konfiguration
+        esp_task_wdt_deinit();
+        esp_task_wdt_init(&wdt_config);
         esp_task_wdt_add(NULL);
     #endif
 #endif

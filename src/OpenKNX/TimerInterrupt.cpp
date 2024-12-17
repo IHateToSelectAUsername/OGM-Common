@@ -71,8 +71,10 @@
         #error Invalid OPENKNX_TIMER_INTERRUPT defined
     #endif
 
+    #ifndef ARDUINO_ARCH_ESP32
     // include after defines!
     #include "TimerInterrupt_Generic.h"
+    #endif
 
     // Select Timer Interrupt
     #if defined(ARDUINO_ARCH_SAMD)
