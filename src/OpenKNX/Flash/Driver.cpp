@@ -6,10 +6,10 @@ extern uint32_t __etext;
 extern uint32_t __data_start__;
 extern uint32_t __data_end__;
 #elif defined(ARDUINO_ARCH_ESP32)
-#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-#include "spi_flash_mmap.h"
-#include "esp_flash.h" 
-#endif
+    #if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+        #include "esp_flash.h"
+        #include "spi_flash_mmap.h"
+    #endif
 #else
 extern uint32_t _EEPROM_start;
 extern uint32_t _FS_start;
@@ -46,15 +46,16 @@ namespace OpenKNX
             _pageSize = 256;
             _startFree = 0;
 
-#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    #if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
             uint32_t size_flash_chip;
-            esp_flash_get_size(nullptr, &size_flash_chip);
+            if (esp_flash_get_size(NULL, &size_flash_chip) != ESP_OK)
+                openknx.hardware.fatalError(FATAL_FLASH_PARAMETERS, "esp_flash_get_size");
             _endFree = size_flash_chip; // value wrong but needed vor validation
-#else
+
+    #else
 
             _endFree = spi_flash_get_chip_size(); // value wrong but needed vor validation
-#endif
-
+    #endif
 
             spi_flash_mmap_handle_t *out_handle;
             spi_flash_mmap(_offset, _size, SPI_FLASH_MMAP_DATA, (const void **)&_mmap, (spi_flash_mmap_handle_t *)&out_handle);
@@ -380,11 +381,12 @@ namespace OpenKNX
             {
             }
 #elif defined(ARDUINO_ARCH_ESP32)
-#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-            esp_flash_erase_region(nullptr, ((size_t)_offset + (sector * _sectorSize)), _sectorSize);
-#else
+    #if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+            if (esp_flash_erase_region(NULL, ((size_t)_offset + (sector * _sectorSize)), _sectorSize) != ESP_OK)
+                openknx.hardware.fatalError(FATAL_FLASH_PARAMETERS, "esp_flash_erase_region");
+    #else
             spi_flash_erase_range(((size_t)_offset + (sector * _sectorSize)), _sectorSize);
-#endif
+    #endif
 #elif defined(ARDUINO_ARCH_RP2040)
             noInterrupts();
             rp2040.idleOtherCore();
@@ -461,11 +463,14 @@ namespace OpenKNX
 
                 // Changes Found
                 if (currentSize > 0)
-#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-                    esp_flash_write(nullptr, (const void*) (_offset + (_bufferSector * _sectorSize) + currentPosition), (uint32_t) _buffer + currentPosition, currentSize);
-#else
+                {
+    #if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+                    if (esp_flash_write(NULL, (const void *)_buffer + currentPosition, (_offset + (_bufferSector * _sectorSize) + currentPosition), currentSize) != ESP_OK)
+                       openknx.hardware.fatalError(FATAL_FLASH_PARAMETERS, "esp_flash_write");
+    #else
                     spi_flash_write((size_t)(_offset + (_bufferSector * _sectorSize) + currentPosition), _buffer + currentPosition, currentSize);
-#endif
+    #endif
+                }
                 // flash_range_program((intptr_t)(_offset + (_bufferSector * _sectorSize) + currentPosition), _buffer + currentPosition, currentSize);
 
                 currentPosition += currentSize + _pageSize;
