@@ -26,8 +26,8 @@ namespace OpenKNX
 
         std::string humanApplicationNumber()
         {
-            char buffer[5] = {};
-            sprintf(buffer, "%04X", applicationNumber());
+            char buffer[6] = {};
+            sprintf(buffer, "$%04X", applicationNumber());
             return std::string(buffer);
         }
 
@@ -69,8 +69,8 @@ namespace OpenKNX
 
         std::string humanFirmwareNumber()
         {
-            char buffer[5] = {};
-            sprintf(buffer, "%04X", firmwareNumber());
+            char buffer[6] = {};
+            sprintf(buffer, "$%04X", firmwareNumber());
             return std::string(buffer);
         }
 
