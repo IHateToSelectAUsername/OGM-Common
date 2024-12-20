@@ -2,9 +2,14 @@
 
 ## 1.3.0:
 * Feature #34: Time Implementation and Sun Calculation 
-* Update: RP2040 Platform to Core 4.2.1
+* Update: RP2040 Platform to Core 4.4.0 + Rpi Base Platform
 * Change: Stop build process on overlapping flash memory regions
-  * Refactor: Memory Layout-Check/Info in Build-Process
+*   Refactor: Memory Layout-Check/Info in Build-Process
+* Refactor: Watchdog handling with auto erase on too many restarts
+* ESP32 work on support 
+*   ESP32: Use RTOS Timer instead TimerInterrupts
+*   ESP32: Adds new Partition layouts
+* Optimizes device console
 
 ## 1.2.1: 2024-11-18
 * Update: RP2040 Platform to Core 4.1.1 + Rpi Base Platform
