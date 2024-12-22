@@ -160,7 +160,7 @@ namespace OpenKNX
 
     void TimerInterrupt::processLeds()
     {
-#ifndef ARDUINO_ARCH_ESP32
+#ifndef OPENKNX_SERIALLED_ENABLE
         if (_time % 2)
         {
             openknx.progLed.loop();
