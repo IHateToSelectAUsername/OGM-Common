@@ -1,7 +1,7 @@
 #pragma once
 #ifdef ARDUINO_ARCH_ESP32
     #include "OpenKNX/Led/Base.h"
-    #include <driver/rmt.h>
+    #include <driver/rmt_tx.h>
 
 namespace OpenKNX
 {
@@ -11,7 +11,7 @@ namespace OpenKNX
         class SerialLedManager
         {
           private:
-            rmt_item32_t *_rmtItems = nullptr;
+            rmt_symbol_word_t *_rmtItems = nullptr;
             uint8_t _rmtChannel = 0;
             uint8_t _ledCount = 0;
             uint32_t _lastWritten = 0;

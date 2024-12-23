@@ -45,13 +45,30 @@ namespace OpenKNX
 
     #define BITS_PER_LED_CMD 24
 
-    // WS2812 timing parameters
-    // 0.35us and 0.90us
-    // on tick is 80MHz / divider = 0.025us
-    #define T0H 14 // 0 bit high time
-    #define T0L 36 // 0 bit low time
-    #define T1H 36 // 1 bit high time
-    #define T1L 14 // 1 bit low time
+    #define RMT_LED_STRIP_RESOLUTION_HZ 10000000 // 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
+
+
+    static const rmt_symbol_word_t ws2812_zero = {
+        .duration0 = (uint16_t)3, // T0H=0.3us
+        .level0 = 1,
+        .duration1 = (uint16_t)9, // T0L=0.9us
+        .level1 = 0,
+    };
+
+    static const rmt_symbol_word_t ws2812_one = {
+        .duration0 = (uint16_t)9, // T1L=0.9us
+        .level0 = 1,
+        .duration1 = (uint16_t)3, // T1H=0.3us
+        .level1 = 0,
+    };
+
+    //reset defaults to 50uS
+    static const rmt_symbol_word_t ws2812_reset = {
+        .duration0 = RMT_LED_STRIP_RESOLUTION_HZ / 1000000 * 50 / 2,
+        .level0 = 1,
+        .duration1 = RMT_LED_STRIP_RESOLUTION_HZ / 1000000 * 50 / 2,
+        .level1 = 0,
+    };
 
         /*
          * Set the color of the RGB LED
@@ -68,29 +85,34 @@ namespace OpenKNX
         {
             _rmtChannel = rmtChannel;
             _ledCount = ledCount;
-            rmt_config_t config = RMT_DEFAULT_CONFIG_TX((gpio_num_t)ledPin, (rmt_channel_t)rmtChannel);
-            config.clk_div = 2;
-            config.mem_block_num = ((ledCount * BITS_PER_LED_CMD) / 64) + 1; // one memblock has 64 * 32-bit values (rmt items) which represent 1 encoded bit for ws2812 led. 24bit per LED
+            rmt_tx_channel_config_t config = // RMT_DEFAULT_CONFIG_TX((gpio_num_t)ledPin, (rmt_channel_t)rmtChannel);
+                                                    {
+                                            .gpio_num = (gpio_num_t)ledPin,
+                                            .clk_src = RMT_CLK_SRC_DEFAULT, // select source clock
+                                            .resolution_hz = RMT_LED_STRIP_RESOLUTION_HZ,
+                                            .mem_block_symbols = (ledCount * BITS_PER_LED_CMD) , // increase the block size can make the LED less flickering
+                                            .trans_queue_depth = 0, // set the number of transactions that can be pending in the background
+                                        };
 
-            _rmtItems = new rmt_item32_t[_ledCount * BITS_PER_LED_CMD + 1];
+            //_rmtItems = new rmt_item32_t[_ledCount * BITS_PER_LED_CMD + 1];
             _ledData = new uint32_t[_ledCount];
 
             // initalize with all LEDs off
             for (int i = 0; i < BITS_PER_LED_CMD * _ledCount; i++)
             {
-                _rmtItems[i].level0 = 1;
-                _rmtItems[i].duration0 = T0H;
-                _rmtItems[i].level1 = 0;
-                _rmtItems[i].duration1 = T1H;
+                //_rmtItems[i].level0 = 1;
+                //_rmtItems[i].duration0 = T0H;
+                //_rmtItems[i].level1 = 0;
+                //_rmtItems[i].duration1 = T1H;
             }
 
             // Initialize the RMT driver
-            if (rmt_config(&config) != ESP_OK)
+            //if (rmt_config(&config) != ESP_OK)
             {
                 logError("SerialLedManager", "Configuration of RMT driver failed");
                 return;
             }
-            if (rmt_driver_install(config.channel, 0, 0) != ESP_OK)
+            //if (rmt_driver_install(config.channel, 0, 0) != ESP_OK)
             {
                 logError("SerialLedManager", "Installation of RMT driver failed");
                 return;
@@ -157,13 +179,13 @@ namespace OpenKNX
                     {
                         if (colorbits & (1 << (23 - i)))
                         {
-                            _rmtItems[j * BITS_PER_LED_CMD + i].duration0 = T0L;
-                            _rmtItems[j * BITS_PER_LED_CMD + i].duration1 = T1L;
+                            //_rmtItems[j * BITS_PER_LED_CMD + i].duration0 = T0L;
+                            //_rmtItems[j * BITS_PER_LED_CMD + i].duration1 = T1L;
                         }
                         else
                         {
-                            _rmtItems[j * BITS_PER_LED_CMD + i].duration0 = T0H;
-                            _rmtItems[j * BITS_PER_LED_CMD + i].duration1 = T1H;
+                            //_rmtItems[j * BITS_PER_LED_CMD + i].duration0 = T0H;
+                            //_rmtItems[j * BITS_PER_LED_CMD + i].duration1 = T1H;
                         }
                     }
                 }
@@ -181,7 +203,7 @@ namespace OpenKNX
                 // uint32_t t1 = micros();
                 fillRmt();
                 // uint32_t t2 = micros();
-                rmt_write_items((rmt_channel_t)_rmtChannel, _rmtItems, _ledCount * BITS_PER_LED_CMD, false);
+                //rmt_write_items((rmt_channel_t)_rmtChannel, _rmtItems, _ledCount * BITS_PER_LED_CMD, false);
                 _dirty = 0;
                 // uint32_t t3 = micros();
 
